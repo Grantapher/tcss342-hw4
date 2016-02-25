@@ -1,5 +1,4 @@
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.PriorityQueue;
 
@@ -196,11 +195,6 @@ public class CodingTree {
             return new Traverser();
         }
 
-        @Override
-        public String toString() {
-            return new TreePrinter().printNodes();
-        }
-
         private class Node implements Comparable<Node> {
             private Node left, right;
             private Integer count;
@@ -268,97 +262,5 @@ public class CodingTree {
                 current = root;
             }
         }
-
-        // taken from http://stackoverflow.com/a/4973083
-        private class TreePrinter {
-
-            public String printNodes() {
-                int maxLevel = maxLevel(root);
-
-                return printNodeInternal(Collections.singletonList(root), new StringBuilder(), 1, maxLevel);
-            }
-
-            private String printNodeInternal(List<Node> nodes, StringBuilder sb, int level, int maxLevel) {
-                if (nodes.isEmpty() || isAllElementsNull(nodes))
-                    return "";
-
-                int floor = maxLevel - level;
-                int endgeLines = (int) Math.pow(2, (Math.max(floor - 1, 0)));
-                int firstSpaces = (int) Math.pow(2, (floor)) - 1;
-                int betweenSpaces = (int) Math.pow(2, (floor + 1)) - 1;
-
-                printWhitespaces(firstSpaces, sb);
-
-                List<Node> newNodes = new ArrayList<>();
-                for (Node node : nodes) {
-                    if (node != null) {
-                        if (null != node.data) sb.append(node.data);
-                        else if (null != node.count) sb.append(node.count);
-                        else sb.append(' ');
-                        newNodes.add(node.left);
-                        newNodes.add(node.right);
-                    } else {
-                        newNodes.add(null);
-                        newNodes.add(null);
-                        sb.append(" ");
-                    }
-
-                    printWhitespaces(betweenSpaces, sb);
-                }
-                sb.append('\n');
-
-                for (int i = 1; i <= endgeLines; i++) {
-                    for (Node node : nodes) {
-                        printWhitespaces(firstSpaces - i, sb);
-                        if (node == null) {
-                            printWhitespaces(endgeLines + endgeLines + i + 1, sb);
-                            continue;
-                        }
-
-                        if (node.left != null)
-                            sb.append("/");
-                        else
-                            printWhitespaces(1, sb);
-
-                        printWhitespaces(i + i - 1, sb);
-
-                        if (node.right != null)
-                            sb.append("\\");
-                        else
-                            printWhitespaces(1, sb);
-
-                        printWhitespaces(endgeLines + endgeLines - i, sb);
-                    }
-
-                    sb.append('\n');
-                }
-
-                printNodeInternal(newNodes, sb, level + 1, maxLevel);
-
-                return sb.toString();
-            }
-
-            private void printWhitespaces(int count, StringBuilder sb) {
-                for (int i = 0; i < count; i++)
-                    sb.append(" ");
-            }
-
-            private int maxLevel(Node node) {
-                if (node == null)
-                    return 0;
-
-                return Math.max(maxLevel(node.left), maxLevel(node.right)) + 1;
-            }
-
-            private boolean isAllElementsNull(List<Node> list) {
-                for (Node node : list) {
-                    if (node != null)
-                        return false;
-                }
-                return true;
-            }
-
-        }
-
     }
 }

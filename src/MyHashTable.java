@@ -44,25 +44,19 @@ public class MyHashTable<K, V> implements Iterable<MyHashTable<K, V>.Entry<K, V>
         sb.append("Number of Buckets: ").append(myCapacity).append('\n');
 
         sb.append("Histogram of Probes:\n[");
-        int count = 0;
+        int total = 0;
         for (int i = 0; i <= myMaxProbes; i++) {
             int num = myProbes[i];
             sb.append(num).append(", ");
+
+            total += i * myProbes[i];
         }
         sb.replace(sb.length() - 2, sb.length(), "]\n");
 
         sb.append("Fill Percentage: ").append((float) myCount / (float) myCapacity).append("%\n");
         sb.append("Max Linear Probe: ").append(myMaxProbes).append('\n');
-        sb.append("Average Linear Probe: ").append(getAverageProbe()).append('\n');
+        sb.append("Average Linear Probe: ").append((float) total / (float) myCount).append('\n');
         System.out.println(sb.toString());
-    }
-
-    private float getAverageProbe() {
-        int total = 0;
-        for (int i = 1; i < myMaxProbes; i++) {
-            total += i * myProbes[i];
-        }
-        return (float) total / (float) myCount;
     }
 
     private int hash(K key) {
@@ -87,13 +81,11 @@ public class MyHashTable<K, V> implements Iterable<MyHashTable<K, V>.Entry<K, V>
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
-        sb.append("[ ");
-        for (int i = 0; i < myCapacity; i++) {
-            Entry<K, V> entry = getEntry(i);
-            if (null == entry) continue;
+        sb.append("[");
+        for (Entry<K, V> entry : this) {
             sb.append(entry).append(", ");
         }
-        sb.replace(sb.length() - 3, sb.length(), " ]");
+        sb.replace(sb.length() - 3, sb.length(), "]");
         return sb.toString();
     }
 
