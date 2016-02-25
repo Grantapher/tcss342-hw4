@@ -1,7 +1,7 @@
-import java.util.ArrayList;
+import java.util.Iterator;
 
-public class MyHashTable<K, V> {
-    private Entry<K, V>[] myBuckets;
+public class MyHashTable<K, V> implements Iterable<MyHashTable<K, V>.Entry<K, V>> {
+    private Object[] myBuckets;
     private int[] myProbes;
     private final int myCapacity;
     private int myCount;
@@ -9,7 +9,7 @@ public class MyHashTable<K, V> {
 
     @SuppressWarnings("unchecked")
     public MyHashTable(int capacity) {
-        myBuckets = (Entry<K, V>[]) new Object[capacity];
+        myBuckets = new Object[capacity];
         myProbes = new int[capacity];
         myCapacity = capacity;
         myCount = 0;
@@ -18,7 +18,7 @@ public class MyHashTable<K, V> {
 
     void put(K key, V val) {
         int index = hash(key);
-        Entry<K, V> entry = myBuckets[index];
+        Entry<K, V> entry = getEntry(index);
         if (null == entry) {
             entry = new Entry<>(key, val);
             myBuckets[index] = entry;
@@ -28,7 +28,7 @@ public class MyHashTable<K, V> {
     }
 
     V get(K key) {
-        Entry<K, V> entry = myBuckets[hash(key)];
+        Entry<K, V> entry = getEntry(hash(key));
         return null == entry ? null : entry.getValue();
     }
 
@@ -43,15 +43,18 @@ public class MyHashTable<K, V> {
         sb.append("Number of Entries: ").append(myCount).append('\n');
         sb.append("Number of Buckets: ").append(myCapacity).append('\n');
 
-        sb.append("Histogram of Probes: ");
-        for (int n : myProbes) {
-            sb.append(n).append(", ");
+        sb.append("Histogram of Probes:\n[");
+        int count = 0;
+        for (int i = 0; i <= myMaxProbes; i++) {
+            int num = myProbes[i];
+            sb.append(num).append(", ");
         }
-        sb.replace(sb.length() - 3, sb.length(), "]\n");
+        sb.replace(sb.length() - 2, sb.length(), "]\n");
 
         sb.append("Fill Percentage: ").append((float) myCount / (float) myCapacity).append("%\n");
         sb.append("Max Linear Probe: ").append(myMaxProbes).append('\n');
         sb.append("Average Linear Probe: ").append(getAverageProbe()).append('\n');
+        System.out.println(sb.toString());
     }
 
     private float getAverageProbe() {
@@ -63,30 +66,66 @@ public class MyHashTable<K, V> {
     }
 
     private int hash(K key) {
-        int originalIndex = key.hashCode(), index;
+        int originalIndex = Math.abs(key.hashCode() * 31);
+        int probeLength = 0;
+        int index;
         for (index = originalIndex % myCapacity; myBuckets[index] != null; index = (index + 1) % myCapacity) {
-            if (myBuckets[index].matches(key)) return index;
+            if (getEntry(index).matches(key)) return index;
+            probeLength++;
         }
-        int probeLength = index - originalIndex;
         myCount++;
         myProbes[probeLength]++;
         myMaxProbes = Math.max(myMaxProbes, probeLength);
         return index;
     }
 
+    @SuppressWarnings("unchecked")
+    private Entry<K, V> getEntry(int i) {
+        return (Entry<K, V>) myBuckets[i];
+    }
+
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
         sb.append("[ ");
-        //TODO check null?
-        for (Entry<K, V> entry : myBuckets) {
+        for (int i = 0; i < myCapacity; i++) {
+            Entry<K, V> entry = getEntry(i);
+            if (null == entry) continue;
             sb.append(entry).append(", ");
         }
         sb.replace(sb.length() - 3, sb.length(), " ]");
         return sb.toString();
     }
 
-    private class Entry<A, B> {
+    @Override
+    public Iterator<MyHashTable<K, V>.Entry<K, V>> iterator() {
+        return new MapIterator();
+    }
+
+    private class MapIterator implements Iterator<MyHashTable<K, V>.Entry<K, V>> {
+        private int myIndex = 0;
+
+        @Override
+        public boolean hasNext() {
+            while (myIndex < myCapacity) {
+                if (null != myBuckets[myIndex]) return true;
+                myIndex++;
+            }
+            return false;
+        }
+
+        @Override
+        public Entry<K, V> next() {
+            return getEntry(myIndex++);
+        }
+
+        @Override
+        public void remove() {
+            throw new IllegalStateException("Cannot remove From MyHashTable Iterator.");
+        }
+    }
+
+    public class Entry<A, B> {
         private final A key;
         private B value;
 
@@ -118,7 +157,7 @@ public class MyHashTable<K, V> {
 
         @Override
         public String toString() {
-            return key.toString() + " -> " + value.toString();
+            return "\"" + key.toString() + "\" -> " + value.toString();
         }
     }
 }

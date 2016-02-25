@@ -1,15 +1,18 @@
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.PriorityQueue;
 
 public class CodingTree {
     public String message;
-    public Map<Character, String> codes;
+    public MyHashTable<String, String> codes;
     public HuffmanTree huffmanTree;
-    public Map<Character, Integer> counts;
+    public MyHashTable<String, Integer> counts;
     public List<Byte> bits;
 
     public CodingTree(String message) {
         this.message = message;
-        counts = countCharacters(message);
+        counts = countItems(message);
         huffmanTree = new HuffmanTree(counts);
         codes = huffmanTree.generateCodes();
         bits = convertToBits(message);
@@ -17,21 +20,20 @@ public class CodingTree {
 
     private List<Byte> convertToBits(String message) {
         StringBuilder sb = new StringBuilder();
-//        message.chars().mapToObj(CodingTree::intToCharCast)
-//                .map(codes::get)
-//                .forEach(sb::append);
-        for (int i = 0; i < message.length(); i++) {
-            char c = message.charAt(i);
-            String code = codes.get(c);
+
+        //taken from http://stackoverflow.com/a/2206432
+        final String withDelimiter = "((?<=%1$s)|(?=%1$s))";
+        final String delimiterPattern = String.format(withDelimiter, "[^0-9A-Za-z'-]");
+        String[] items = message.split(delimiterPattern);
+
+        for (String item : items) {
+            String code = codes.get(item);
             sb.append(code);
         }
         String converted = sb.toString();
 
         //taken from http://stackoverflow.com/a/23664301
         String[] splits = converted.split("(?<=\\G.{8})");
-//        List<Byte> bytes = Arrays.stream(splits)
-//                .map(this::parseBinary)
-//                .collect(Collectors.toList());
         List<Byte> bytes = new ArrayList<>();
         for (String split : splits) {
             byte b = parseBinary(split);
@@ -68,24 +70,27 @@ public class CodingTree {
         return str;
     }
 
-    private Map<Character, Integer> countCharacters(String message) {
-        Map<Character, Integer> counts = new HashMap<>();
-//        message.chars().mapToObj(CodingTree::intToCharCast)
-//                .forEach(c -> counts.merge(c, 1, (oldVal, newVal) -> oldVal + newVal));
-        for (int i = 0; i < message.length(); i++) {
-            char c = message.charAt(i);
-            Integer count = counts.get(c);
+    private MyHashTable<String, Integer> countItems(String message) {
+        MyHashTable<String, Integer> counts = new MyHashTable<>(0x8000);
+
+        //taken from http://stackoverflow.com/a/2206432
+        final String withDelimiter = "((?<=%1$s)|(?=%1$s))";
+        final String delimiterPattern = String.format(withDelimiter, "[^0-9A-Za-z'-]");
+
+        String[] items = message.split(delimiterPattern);
+        for (String item : items) {
+            Integer count = counts.get(item);
             if (count == null) {
-                counts.put(c, 1);
+                counts.put(item, 1);
             } else {
-                counts.put(c, count + 1);
+                counts.put(item, count + 1);
             }
         }
 
         return counts;
     }
 
-    public String decode(List<Byte> bits, Map<Character, String> codes) {
+    public String decode(List<Byte> bits, MyHashTable<String, String> codes) {
         HuffmanTree tree = new HuffmanTree(codes, true);
         StringBuilder sb = new StringBuilder();
         HuffmanTree.Traverser traverser = tree.getTraverser();
@@ -94,8 +99,8 @@ public class CodingTree {
                 boolean bitSet = (b & 0b1 << 7 - i) > 0;
                 traverser.traverse(bitSet);
                 if (traverser.isLeaf()) {
-                    char character = traverser.getCharacter();
-                    sb.append(character);
+                    String item = traverser.getString();
+                    sb.append(item);
                     traverser.reset();
                 }
             }
@@ -113,7 +118,6 @@ public class CodingTree {
         if (!isLong) sb.append(message).append('\n');
         sb.append(codes.toString()).append('\n');
         if (!isLong) {
-//            sb.append(bits.stream().map(this::byteToBinary).reduce((s, s2) -> s + " " + s2).get()).append('\n');
             for (byte b : bits) {
                 String bin = byteToBinary(b);
                 sb.append(bin).append(' ');
@@ -128,12 +132,9 @@ public class CodingTree {
     private class HuffmanTree {
         private Node root;
 
-        private HuffmanTree(Map<Character, Integer> counts) {
+        private HuffmanTree(MyHashTable<String, Integer> counts) {
             PriorityQueue<Node> pq = new PriorityQueue<>();
-//            counts.entrySet().stream()
-//                    .map(Node::new)
-//                    .forEach(pq::offer);
-            for (Map.Entry<Character, Integer> entry : counts.entrySet()) {
+            for (MyHashTable<String, Integer>.Entry<String, Integer> entry : counts) {
                 Node newNode = new Node(entry);
                 pq.offer(newNode);
             }
@@ -145,22 +146,21 @@ public class CodingTree {
             root = pq.poll();
         }
 
-        public HuffmanTree(Map<Character, String> codes, boolean isCodes) {
+        public HuffmanTree(MyHashTable<String, String> codes, boolean isCodes) {
             if (!isCodes)
                 throw new IllegalStateException("Java Generic type erasure is dumb, change this to true or " +
                         "delete it for the other constructor.");
 
             root = new Node();
-//            codes.entrySet().stream().forEach(this::addCode);
-            for (Map.Entry<Character, String> entry : codes.entrySet()) {
+            for (MyHashTable<String, String>.Entry<String, String> entry : codes) {
                 addCode(entry);
             }
 
         }
 
-        private void addCode(Map.Entry<Character, String> entry) {
+        private void addCode(MyHashTable<String, String>.Entry<String, String> entry) {
             Node current = root;
-            char character = entry.getKey();
+            String item = entry.getKey();
             String path = entry.getValue();
 
             for (int i = 0; i < path.length(); i++) {
@@ -174,18 +174,18 @@ public class CodingTree {
                 }
             }
 
-            current.character = character;
+            current.data = item;
         }
 
-        public Map<Character, String> generateCodes() {
-            Map<Character, String> map = new HashMap<>();
+        public MyHashTable<String, String> generateCodes() {
+            MyHashTable<String, String> map = new MyHashTable<>(0x8000);
             generateCodesRecursive(map, root, "");
             return map;
         }
 
-        private void generateCodesRecursive(Map<Character, String> map, Node node, String code) {
+        private void generateCodesRecursive(MyHashTable<String, String> map, Node node, String code) {
             if (node.isLeaf()) {
-                map.put(node.character, code);
+                map.put(node.data, code);
             } else {
                 generateCodesRecursive(map, node.left, code + "0");
                 generateCodesRecursive(map, node.right, code + "1");
@@ -204,14 +204,14 @@ public class CodingTree {
         private class Node implements Comparable<Node> {
             private Node left, right;
             private Integer count;
-            private Character character;
+            private String data;
 
-            private Node(Character character, Integer count) {
-                this.character = character;
+            private Node(String data, Integer count) {
+                this.data = data;
                 this.count = count;
             }
 
-            private Node(Map.Entry<Character, Integer> entry) {
+            private Node(MyHashTable<String, Integer>.Entry<String, Integer> entry) {
                 this(entry.getKey(), entry.getValue());
             }
 
@@ -220,7 +220,7 @@ public class CodingTree {
             }
 
             public boolean isLeaf() {
-                return null != character;
+                return null != data;
             }
 
             @Override
@@ -260,8 +260,8 @@ public class CodingTree {
                 return current.isLeaf();
             }
 
-            public char getCharacter() {
-                return current.character;
+            public String getString() {
+                return current.data;
             }
 
             public void reset() {
@@ -292,7 +292,7 @@ public class CodingTree {
                 List<Node> newNodes = new ArrayList<>();
                 for (Node node : nodes) {
                     if (node != null) {
-                        if (null != node.character) sb.append(node.character);
+                        if (null != node.data) sb.append(node.data);
                         else if (null != node.count) sb.append(node.count);
                         else sb.append(' ');
                         newNodes.add(node.left);

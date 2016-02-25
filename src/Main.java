@@ -28,10 +28,14 @@ public class Main {
         FileWriter writer = new FileWriter(OUTPUT_CODES);
         writer.write(codingTree.codes.toString());
         writer.close();
-
-        System.out.println("Compression percentage: " + ((double) finalSize / (double) initialSize) + '%');
         long endTime = System.nanoTime();
-        System.out.println("Runtime:                " + (double) (endTime - startTime) / 1000000000 + " seconds");
+
+        codingTree.codes.stats();
+        System.out.println("Uncompressed file size: " + initialSize + " bytes");
+        System.out.println("Compressed file size:   " + finalSize + " bytes");
+        System.out.println("Compression Ratio:      " + ((double) finalSize / (double) initialSize * 100d) + '%');
+        System.out.println("Running Time:           " + (double) (endTime - startTime) / 1000000000 + " seconds");
+
 
         FileWriter codeWriter = new FileWriter(OUTPUT_DECODE);
         codeWriter.write(codingTree.decode(codingTree.bits, codingTree.codes));
@@ -46,10 +50,5 @@ public class Main {
         }
         reader.close();
         return sb.toString();
-    }
-
-    private static void testCodingTree() {
-        CodingTree codingTree = new CodingTree("oiua shdfiouas vdfmioausdyhoasuidrymaesoc;,prueosah");
-        System.out.println(codingTree);
     }
 }
